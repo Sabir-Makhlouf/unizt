@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "unizt"
+version = "0.1.0"
+description = "Unified Post-Processing Tool for True Thermoelectric Figure of Merit ZT, Lattice Thermal Conductivity, and Device Efficiency from First-Principles DFT & BoltzTraP2 Calculations"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [
+    { name = "Dr. Sabir Makhlouf", email = "sabir.makhlouf@gmail.com" },
+]
+keywords = [
+    "thermoelectrics",
+    "figure-of-merit",
+    "ZT",
+    "BoltzTraP2",
+    "DFT",
+    "lattice-thermal-conductivity",
+    "deformation-potential-theory",
+    "materials-science",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "numpy>=1.21",
+    "scipy>=1.8",
+    "matplotlib>=3.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "build>=0.10",
+]
+
+[project.scripts]
+unizt = "unizt.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["unizt*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"

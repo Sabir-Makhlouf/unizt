@@ -1,0 +1,6 @@
+Material,Class,B_GPa,G_GPa,Theta_D_K,Gruneisen_gamma,kappa_L_Slack_W_m_K,kappa_L_Ref_W_m_K,ZT_max_UniZT,ZT_max_Ref,eta_max_percent
+Bi2Te3,Trigonal (layered),37.0,19.6,163.3,1.63,0.62,1.45,1.12,1.05,9.81
+PbTe,Cubic (rocksalt),41.3,23.9,175.4,1.54,4.19,2.2,1.58,1.5,17.35
+ZrNiSn,Cubic (Half-Heusler),123.8,72.0,377.0,1.53,9.36,8.5,0.81,0.8,8.51
+Mg2Si,Cubic (antifluorite),55.0,45.6,566.1,1.2,16.02,12.1,0.66,0.86,6.42
+SnSe,Orthorhombic (layered),45.3,26.4,231.0,1.53,0.53,0.65,2.8,2.6,24.82

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>UniZT Benchmark Table</title>
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; margin: 2rem; color: #1f2937; }
+    .wrap { max-width: 1120px; margin: auto; }
+    caption { caption-side: top; text-align: left; font-weight: 600; margin-bottom: 0.75rem; font-size: 1.05rem; }
+    table { border-collapse: collapse; width: 100%; border-top: 2px solid #111827; border-bottom: 2px solid #111827; }
+    th, td { padding: 0.55rem 0.7rem; font-size: 0.92rem; }
+    thead th { border-bottom: 1.5px solid #111827; background: #f8fafc; font-weight: 600; text-align: center; }
+    thead th:nth-child(1), thead th:nth-child(2) { text-align: left; }
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    td.text { text-align: left; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .note { margin-top: 0.65rem; font-size: 0.88rem; color: #4b5563; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <table>
+      <caption>Validation of UniZT predictions across five benchmark thermoelectric crystal classes using NIST JARVIS-DFT inputs.</caption>
+      <thead><tr><th>Material</th><th>Crystal Class</th><th>B (GPa)</th><th>G (GPa)</th><th>θ_D (K)</th><th>γ</th><th>κ_L Slack (W/m·K)</th><th>κ_L Ref (W/m·K)</th><th>ZT_max (UniZT)</th><th>ZT_max (Ref)</th><th>η_max (%)</th></tr></thead>
+      <tbody>
+        <tr><td class="text">Bi2Te3</td><td class="text">Trigonal (layered)</td><td class="num">37.0</td><td class="num">19.6</td><td class="num">163.3</td><td class="num">1.63</td><td class="num">0.62</td><td class="num">1.45</td><td class="num">1.12</td><td class="num">1.05</td><td class="num">9.81</td></tr><tr><td class="text">PbTe</td><td class="text">Cubic (rocksalt)</td><td class="num">41.3</td><td class="num">23.9</td><td class="num">175.4</td><td class="num">1.54</td><td class="num">4.19</td><td class="num">2.20</td><td class="num">1.58</td><td class="num">1.50</td><td class="num">17.35</td></tr><tr><td class="text">ZrNiSn</td><td class="text">Cubic (Half-Heusler)</td><td class="num">123.8</td><td class="num">72.0</td><td class="num">377.0</td><td class="num">1.53</td><td class="num">9.36</td><td class="num">8.50</td><td class="num">0.81</td><td class="num">0.80</td><td class="num">8.51</td></tr><tr><td class="text">Mg2Si</td><td class="text">Cubic (antifluorite)</td><td class="num">55.0</td><td class="num">45.6</td><td class="num">566.1</td><td class="num">1.20</td><td class="num">16.02</td><td class="num">12.10</td><td class="num">0.66</td><td class="num">0.86</td><td class="num">6.42</td></tr><tr><td class="text">SnSe</td><td class="text">Orthorhombic (layered)</td><td class="num">45.3</td><td class="num">26.4</td><td class="num">231.0</td><td class="num">1.53</td><td class="num">0.53</td><td class="num">0.65</td><td class="num">2.80</td><td class="num">2.60</td><td class="num">24.82</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Parity metrics: kappa_L(300 K) R^2 = 0.797 (MAE = 1.54 W m^-1 K^-1); Peak ZT R^2 = 0.958 (MAE = 0.11).</p>
+  </div>
+</body>
+</html>

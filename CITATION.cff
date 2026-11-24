@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use UniZT in your research, please cite it using the metadata below."
+title: "UniZT: A Unified Post-Processing Tool for True Thermoelectric Figure of Merit and Device Efficiency from First-Principles Calculations"
+type: software
+authors:
+  - family-names: "Makhlouf"
+    given-names: "Sabir"
+    email: "sabir.makhlouf@gmail.com"
+version: "0.1.0"
+date-released: "2026-11-24"
+license: "MIT"
+keywords:
+  - thermoelectrics
+  - figure-of-merit
+  - ZT
+  - BoltzTraP2
+  - lattice-thermal-conductivity
+  - Slack-equation
+  - deformation-potential-theory
+  - DFT
+  - post-processing

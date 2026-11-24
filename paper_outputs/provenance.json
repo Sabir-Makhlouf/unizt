@@ -1,0 +1,241 @@
+{
+  "tool": "UniZT v0.1.0",
+  "author": "Dr. Sabir Makhlouf",
+  "generated_utc": "2026-11-24T10:27:07.170906+00:00",
+  "validation_metrics": {
+    "kappa_L_300K": {
+      "R2": 0.796813012924304,
+      "R2_log": 0.7901367131225846,
+      "MAE": 1.5421834457376506,
+      "RMSE": 2.0361604053916644
+    },
+    "peak_ZT": {
+      "R2": 0.9576822108034403,
+      "R2_log": 0.9077862378486428,
+      "MAE": 0.11454572049661456,
+      "RMSE": 0.13697697654282578
+    }
+  },
+  "materials": [
+    {
+      "material": "Bi2Te3",
+      "jarvis_id": "JVASP-25",
+      "crystal_class": "Trigonal (layered)",
+      "space_group": "R-3m (No. 166)",
+      "data_source": "NIST JARVIS-DFT OPTIMADE (live)",
+      "jarvis_doi": "10.1038/s41524-020-00440-1",
+      "experimental_reference": "Poudel et al., Science 320, 634 (2008)",
+      "experimental_doi": "10.1126/science.1156446",
+      "ref_kappa_L_300K_W_m_K": 1.45,
+      "ref_peak_ZT": 1.05,
+      "ref_peak_ZT_T_K": 350.0,
+      "jarvis_metadata": {
+        "source": "NIST JARVIS-DFT OPTIMADE (live)",
+        "url": "https://jarvis.nist.gov/optimade/jarvisdft/v1/structures?filter=chemical_formula_reduced%3D%22Bi2Te3%22&page_limit=30",
+        "jarvis_id": "JVASP-25",
+        "density_kg_m3": 7453.0,
+        "B_gpa": 31.42,
+        "G_gpa": 20.97,
+        "n_atoms": 5,
+        "lattice_vectors": [
+          [
+            10.713272756077517,
+            0.0175185740977443,
+            0.010423096329076
+          ],
+          [
+            9.781717228692994,
+            4.369502186018664,
+            0.0104230962453947
+          ],
+          [
+            9.781717228468274,
+            2.093808242124859,
+            3.835182067489548
+          ]
+        ],
+        "elastic_tensor": null,
+        "mbj_bandgap": -99999,
+        "optb88vdw_bandgap": 0.351,
+        "avg_elec_mass": 0.15,
+        "avg_hole_mass": 0.21333333333333335
+      }
+    },
+    {
+      "material": "PbTe",
+      "jarvis_id": "JVASP-1103",
+      "crystal_class": "Cubic (rocksalt)",
+      "space_group": "Fm-3m (No. 225)",
+      "data_source": "NIST JARVIS-DFT OPTIMADE (live)",
+      "jarvis_doi": "10.1038/s41524-020-00440-1",
+      "experimental_reference": "Pei et al., Nature 473, 66 (2011)",
+      "experimental_doi": "10.1038/nature09996",
+      "ref_kappa_L_300K_W_m_K": 2.2,
+      "ref_peak_ZT": 1.5,
+      "ref_peak_ZT_T_K": 750.0,
+      "jarvis_metadata": {
+        "source": "NIST JARVIS-DFT OPTIMADE (live)",
+        "url": "https://jarvis.nist.gov/optimade/jarvisdft/v1/structures?filter=chemical_formula_reduced%3D%22PbTe%22&page_limit=30",
+        "jarvis_id": "JVASP-1103",
+        "density_kg_m3": 7936.0,
+        "B_gpa": 41.3,
+        "G_gpa": 31.56,
+        "n_atoms": 2,
+        "lattice_vectors": [
+          [
+            4.007212233577286,
+            0.0,
+            2.3135651341461307
+          ],
+          [
+            1.335737411192429,
+            3.7780360246400213,
+            2.3135651341461307
+          ],
+          [
+            0.0,
+            0.0,
+            4.6271302682922615
+          ]
+        ],
+        "elastic_tensor": null,
+        "mbj_bandgap": 1.405,
+        "optb88vdw_bandgap": 1.119,
+        "avg_elec_mass": 0.17,
+        "avg_hole_mass": 0.19000000000000003
+      }
+    },
+    {
+      "material": "ZrNiSn",
+      "jarvis_id": "JVASP-1091",
+      "crystal_class": "Cubic (Half-Heusler)",
+      "space_group": "F-43m (No. 216)",
+      "data_source": "NIST JARVIS-DFT OPTIMADE (live)",
+      "jarvis_doi": "10.1038/s41524-020-00440-1",
+      "experimental_reference": "Xie et al., J. Mater. Chem. A 3, 18144 (2015)",
+      "experimental_doi": "10.1039/C5TA04418A",
+      "ref_kappa_L_300K_W_m_K": 8.5,
+      "ref_peak_ZT": 0.8,
+      "ref_peak_ZT_T_K": 800.0,
+      "jarvis_metadata": {
+        "source": "NIST JARVIS-DFT OPTIMADE (live)",
+        "url": "https://jarvis.nist.gov/optimade/jarvisdft/v1/structures?filter=chemical_formula_reduced%3D%22NiSnZr%22&page_limit=30",
+        "jarvis_id": "JVASP-1091",
+        "density_kg_m3": 7699.0,
+        "B_gpa": 123.8,
+        "G_gpa": 71.82,
+        "n_atoms": 3,
+        "lattice_vectors": [
+          [
+            3.761489267573068,
+            1.1561488e-09,
+            2.1716970725194034
+          ],
+          [
+            1.253829424704411,
+            3.546367036908602,
+            2.1716970725194034
+          ],
+          [
+            0.0,
+            0.0,
+            4.343394145038807
+          ]
+        ],
+        "elastic_tensor": null,
+        "mbj_bandgap": 0.501,
+        "optb88vdw_bandgap": 0.486,
+        "avg_elec_mass": 0.36999999999999994,
+        "avg_hole_mass": 0.56
+      }
+    },
+    {
+      "material": "Mg2Si",
+      "jarvis_id": "JVASP-1076",
+      "crystal_class": "Cubic (antifluorite)",
+      "space_group": "Fm-3m (No. 225)",
+      "data_source": "NIST JARVIS-DFT OPTIMADE (live)",
+      "jarvis_doi": "10.1038/s41524-020-00440-1",
+      "experimental_reference": "Zaitsev et al., Phys. Rev. B 74, 045207 (2006)",
+      "experimental_doi": "10.1103/PhysRevB.74.045207",
+      "ref_kappa_L_300K_W_m_K": 12.1,
+      "ref_peak_ZT": 0.86,
+      "ref_peak_ZT_T_K": 800.0,
+      "jarvis_metadata": {
+        "source": "NIST JARVIS-DFT OPTIMADE (live)",
+        "url": "https://jarvis.nist.gov/optimade/jarvisdft/v1/structures?filter=chemical_formula_reduced%3D%22Mg2Si%22&page_limit=30",
+        "jarvis_id": "JVASP-1076",
+        "density_kg_m3": 1985.0,
+        "B_gpa": 55.0,
+        "G_gpa": 45.6,
+        "n_atoms": 3,
+        "lattice_vectors": [
+          [
+            3.891767547488381,
+            8.710926e-10,
+            2.2469128302502366
+          ],
+          [
+            1.2972555171714013,
+            3.66919375143634,
+            2.246912830250237
+          ],
+          [
+            9.018215e-10,
+            6.376841e-10,
+            4.493826657376472
+          ]
+        ],
+        "elastic_tensor": null,
+        "mbj_bandgap": 0.625,
+        "optb88vdw_bandgap": 0.381,
+        "avg_elec_mass": 0.05000000000000001,
+        "avg_hole_mass": 0.05000000000000001
+      }
+    },
+    {
+      "material": "SnSe",
+      "jarvis_id": "JVASP-299",
+      "crystal_class": "Orthorhombic (layered)",
+      "space_group": "Pnma (No. 62)",
+      "data_source": "NIST JARVIS-DFT OPTIMADE (live)",
+      "jarvis_doi": "10.1038/s41524-020-00440-1",
+      "experimental_reference": "Zhao et al., Nature 508, 373 (2014)",
+      "experimental_doi": "10.1038/nature13184",
+      "ref_kappa_L_300K_W_m_K": 0.65,
+      "ref_peak_ZT": 2.6,
+      "ref_peak_ZT_T_K": 900.0,
+      "jarvis_metadata": {
+        "source": "NIST JARVIS-DFT OPTIMADE (live)",
+        "url": "https://jarvis.nist.gov/optimade/jarvisdft/v1/structures?filter=chemical_formula_reduced%3D%22SeSn%22&page_limit=30",
+        "jarvis_id": "JVASP-299",
+        "density_kg_m3": 5853.0,
+        "B_gpa": 29.74,
+        "G_gpa": 18.87,
+        "n_atoms": 8,
+        "lattice_vectors": [
+          [
+            4.2133478080214095,
+            -3e-16,
+            0.0
+          ],
+          [
+            -1e-16,
+            4.520399509108929,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            11.778176235758503
+          ]
+        ],
+        "elastic_tensor": null,
+        "mbj_bandgap": 1.254,
+        "optb88vdw_bandgap": 0.708,
+        "avg_elec_mass": 0.24333333333333332,
+        "avg_hole_mass": 0.5466666666666667
+      }
+    }
+  ]
+}
