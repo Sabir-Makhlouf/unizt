@@ -33,7 +33,8 @@ from unizt.core.validator import (
     validate_elastic_tensor,
     validate_transport_data,
 )
-from unizt.core.zt import combine_spin_channels, compute_zt
+from unizt.core.zt import combine_spin_channels, compute_zt, optimize_zt
+from unizt.export import export_research_bundle
 from unizt.parsers.boltztrap2 import parse_boltztrap2_trace
 from unizt.parsers.elastic_parser import parse_elastic_tensor
 from unizt.parsers.generic import parse_generic_transport
@@ -459,4 +460,132 @@ def test_cli_spin_polarized_traces(tmp_path: Path):
     assert f"UniZT v{__version__}" in proc.stdout
     assert (outdir / "zt_results.csv").is_file()
     assert (outdir / "zt_results.tex").is_file()
+    assert (outdir / "report_summary.txt").is_file()
+    assert (outdir / "summary_metrics.json").is_file()
+    assert (outdir / "transport_at_ef.csv").is_file()
+    assert (outdir / "optimal_doping_vs_T.csv").is_file()
+    assert (outdir / "table_summary.tex").is_file()
+
+
+def test_physical_windowing_and_research_export(tmp_path: Path):
+    """Verify --ef-window, --max-carrier-density, --at-ef, warning, and export bundle."""
+    # Construct synthetic grid spanning both physical and unphysical (>1e21 cm^-3, >0.5 eV) doping
+    T_vals = np.array([300.0, 600.0])
+    mu_vals = np.array([-1.2, -0.3, 0.0, 0.25, 1.4])  # eV relative to E_F = 0
+    # Corresponding carrier densities in m^-3 (recall 1e21 cm^-3 = 1e27 m^-3)
+    n_vals = np.array([5e28, 2e26, 0.0, -3e26, -8e28])
+    S_vals = np.array([450e-6, 210e-6, 15e-6, -240e-6, -500e-6])
+    sig_tau_vals = np.array([8e19, 1.5e19, 2e18, 1.8e19, 9e19])
+    kap_tau_vals = np.array([3e14, 7e13, 1e13, 8e13, 4e14])
+
+    rows_T, rows_mu, rows_n, rows_S, rows_sig, rows_kap = [], [], [], [], [], []
+    for t in T_vals:
+        for mu, n, s, sig, kap in zip(mu_vals, n_vals, S_vals, sig_tau_vals, kap_tau_vals):
+            rows_T.append(t)
+            rows_mu.append(mu)
+            rows_n.append(n)
+            rows_S.append(s)
+            rows_sig.append(sig)
+            rows_kap.append(kap)
+
+    data = {
+        "T": np.array(rows_T),
+        "mu": np.array(rows_mu),
+        "n": np.array(rows_n),
+        "S": np.array(rows_S),
+        "sigma_tau": np.array(rows_sig),
+        "kappa_e_tau": np.array(rows_kap),
+        "mu_unit": "eV",
+        "n_unit": "m^-3",
+    }
+
+    # Unconstrained optimization picks unphysical 8e22 cm^-3 point and emits warning
+    with pytest.warns(UserWarning, match="Rigid Band Approximation"):
+        unconstrained = compute_zt(
+            data, tau=1e-14, kappa_l=1.0, ef_window=None, max_carrier_density=None
+        )
+    assert abs(unconstrained.overall_peak_n) > 1e27
+
+    # Physical RBA constraints (|mu - E_F| <= 0.5 eV and |n| <= 1e21 cm^-3) exclude +/-1.2/+1.4 eV and >1e27 m^-3
+    constrained = optimize_zt(
+        data, tau=1e-14, kappa_l=1.0, ef_window=0.5, max_carrier_density=1e21, extract_at_ef=True
+    )
+    assert abs(constrained.overall_peak_n) <= 1e27
+    assert np.all(np.abs(constrained.dmu_ev[constrained.physical_mask]) <= 0.5)
+    assert np.all(np.abs(constrained.n[constrained.physical_mask]) <= 1e27)
+    assert constrained.overall_peak_zt < unconstrained.overall_peak_zt
+    assert constrained.at_ef is not None
+    assert len(constrained.at_ef["T"]) == 2
+    assert constrained.at_ef["S"][0] == pytest.approx(15e-6)
+
+    # Verify researcher export suite creates all 5 files with expected schemas
+    bundle_dir = tmp_path / "bundle"
+    paths = export_research_bundle(constrained, bundle_dir, material_name="SyntheticTest")
+    expected_keys = {
+        "report_summary",
+        "summary_metrics",
+        "transport_at_ef",
+        "optimal_doping_vs_T",
+        "table_summary",
+    }
+    assert set(paths.keys()) == expected_keys
+    for p in paths.values():
+        assert p.is_file() and p.stat().st_size > 0
+
+    metrics = json.loads(paths["summary_metrics"].read_text(encoding="utf-8"))
+    assert metrics["constraints"]["ef_window_eV"] == 0.5
+    assert metrics["constraints"]["max_carrier_density_cm3"] == 1e21
+    assert "T_K,S_up_uV_K,S_dn_uV_K,S_tot_uV_K" in paths["transport_at_ef"].read_text(encoding="utf-8")
+    assert "T_K,tau_fs,kappa_L_W_mK,ZT_n" in paths["optimal_doping_vs_T"].read_text(encoding="utf-8")
+
+    # Verify CLI --ef-window, --max-carrier-density, and --at-ef flags end-to-end
+    gen_csv = tmp_path / "synthetic.csv"
+    with gen_csv.open("w", encoding="utf-8") as f:
+        f.write("# T mu n S sigma_tau kappa_e_tau\n")
+        for i in range(len(rows_T)):
+            f.write(
+                f"{rows_T[i]} {rows_mu[i]} {rows_n[i]} {rows_S[i]} {rows_sig[i]} {rows_kap[i]}\n"
+            )
+
+    cli_out = tmp_path / "cli_windowed"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "unizt.cli",
+            "--trace",
+            str(gen_csv),
+            "--code",
+            "generic",
+            "--mu-unit",
+            "ev",
+            "--tau-mode",
+            "constant",
+            "--tau-const",
+            "1e-14",
+            "--kappa-mode",
+            "custom",
+            "--kappa-csv",
+            str(_write_dummy_kappa_csv(tmp_path / "k.csv")),
+            "--ef-window",
+            "0.5",
+            "--max-carrier-density",
+            "1e21",
+            "--at-ef",
+            "--outdir",
+            str(cli_out),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "Intrinsic Transport at mu = E_F" in proc.stdout
+    assert (cli_out / "report_summary.txt").is_file()
+    assert (cli_out / "optimal_doping_vs_T.csv").is_file()
+
+
+def _write_dummy_kappa_csv(path: Path) -> Path:
+    path.write_text("temperature_K,kappa_L_W_m_K\n300,1.0\n600,1.0\n", encoding="utf-8")
+    return path
+
 

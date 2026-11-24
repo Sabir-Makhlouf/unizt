@@ -22,12 +22,13 @@ Developed by **Dr. Sabir Makhlouf** (`sabir.makhlouf@gmail.com`)
 - **True $ZT(T, n)$ & Device Conversion Efficiency (`unizt.core.zt`, `unizt.core.engineering`)**
   - Combines BoltzTraP2 transport coefficients with $\tau(T)$ and $\kappa_L(T)$ to compute Power Factor $\mathrm{PF} = S^2 \sigma$, $\kappa_{\mathrm{tot}}$, and $ZT(T, n)$.
   - **Spin-Polarized Two-Channel Transport (`combine_spin_channels`)**: Exact two-current synthesis of spin-up and spin-down channels including conductivity-weighted Seebeck $S_{\mathrm{tot}}$ and the spin-mixing / bipolar thermal conductivity term $\frac{\sigma_\uparrow \sigma_\downarrow}{\sigma_\uparrow + \sigma_\downarrow}(S_\uparrow - S_\downarrow)^2 T$.
+  - **Physical RBA Windowing & Fermi-Level Analysis (`optimize_zt`, `compute_zt`)**: Restricts doping optimization to realistic Rigid Band Approximation limits (`--ef-window` default `0.5 eV`, `--max-carrier-density` default `1e21 cm^-3`, toggleable via `--no-physical-limits`) and extracts intrinsic transport curves at $\mu = E_F$ (`--at-ef`).
   - Separates $n$-type ($n < 0$) and $p$-type ($n > 0$) regimes and extracts optimal doping $n_{\mathrm{opt}}(T)$ and peak $ZT_{\max}(T)$.
   - Kim et al. (PNAS 2015) engineering figure of merit $ZT_{\mathrm{eng}}$ and leg conversion efficiency $\eta_{\max}$ with automatic Carnot bound verification ($\eta_{\max} \le 1 - T_c / T_h$).
 - **Lightweight Parsers & Extensible Registry (`unizt.parsers`)**
   - Pure stdlib + NumPy parsers for BoltzTraP2/1 `*.trace`, arbitrary whitespace/CSV files (`--cols`), and 6×6 elastic tensors from VASP `OUTCAR`, WIEN2k `elast`/`IRelast`, Quantum ESPRESSO `thermo_pw`, and JSON.
-- **Publication Outputs (`unizt.plotting`, `unizt.cli`)**
-  - 300 DPI journal-ready PNG figures, CSV summaries, and `booktabs` LaTeX tables (`zt_results.tex`).
+- **Researcher-Ready Numerical Export Suite & Publication Figures (`unizt.export`, `unizt.plotting`, `unizt.cli`)**
+  - Every CLI run exports `report_summary.txt`, `summary_metrics.json`, `transport_at_ef.csv`, `optimal_doping_vs_T.csv`, and `table_summary.tex` (`booktabs` LaTeX), alongside optional 300 DPI PNG figures (`--plot`).
 
 ---
 
@@ -68,20 +69,26 @@ unizt \
   --outdir results \
   --plot
 
-# Spin-polarized two-channel post-processing (e.g. magnetic / half-metallic Cs2VBr6)
+# Spin-polarized two-channel post-processing with physical RBA windowing (e.g. Cs2VBr6)
 unizt \
   --trace-up examples/cs2vbr6/up.trace \
   --trace-dn examples/cs2vbr6/dn.trace \
-  --density 4440.1 \
+  --density 3951.6 \
   --m-avg 88.464 \
   --n-atoms 9 \
   --tau-mode dpt \
-  --m-eff 0.85 \
-  --e1 11.0 \
-  --c3d 39.67 \
+  --m-eff 0.50 \
+  --e1 9.0 \
+  --c3d 43.37 \
   --kappa-mode cahill \
+  --ef-window 0.5 \
+  --max-carrier-density 1e21 \
+  --at-ef \
   --outdir results_cs2vbr6 \
   --plot
+
+# Disable physical RBA bounds for unconstrained full-grid exploration (emits warning if |n| > 1e21 cm^-3)
+unizt --trace case.trace --no-physical-limits --tau-mode constant --kappa-mode slack
 
 # Using a generic CSV file with explicit column mapping and JSON configuration
 unizt \
@@ -102,13 +109,13 @@ Run the automated zero-recalculation benchmark across $\mathrm{Bi_2Te_3}$, $\mat
 python scripts/run_paper_benchmark.py
 ```
 
-Run the real-world spin-polarized two-channel case study on the vacancy-ordered double perovskite $\mathrm{Cs_2VBr_6}$ ($Fm\bar{3}m$, using `examples/cs2vbr6/up.trace` & `dn.trace`):
+Run the real-world spin-polarized two-channel case study on the vacancy-ordered double perovskite $\mathrm{Cs_2VBr_6}$ ($Fm\bar{3}m$, $a_0 = 11.02\;\mathrm{\AA}$, $C_{11}=40.27,\;C_{12}=24.67,\;C_{44}=12.06\;\mathrm{GPa}$; Makhlouf et al., *J. Am. Ceram. Soc.* 2026, DOI: `10.1111/jace.70769`) using `examples/cs2vbr6/up.trace` & `dn.trace`:
 
 ```bash
 python scripts/run_cs2vbr6_case_study.py
 ```
 
-Outputs are generated in `paper_outputs/` (including `cs2vbr6_provenance.json`, `table_cs2vbr6_summary.csv`, `table_cs2vbr6_summary.tex`, `fig_cs2vbr6_spin_channels.png`, and `fig_cs2vbr6_zt_vs_t.png`).
+Outputs are generated in `paper_outputs/cs2vbr6/` (`report_summary.txt`, `summary_metrics.json`, `transport_at_ef.csv`, `optimal_doping_vs_T.csv`, `table_cs2vbr6_summary.tex`, `fig_cs2vbr6_spin_channels.png`, and `fig_cs2vbr6_zt_vs_t.png`).
 
 ---
 

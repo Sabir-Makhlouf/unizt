@@ -23,16 +23,17 @@ _DEFAULT_BT_COLUMNS = {
 }
 
 
-def _identify_header_columns(header_line: str) -> tuple[dict[str, int], Optional[str]]:
+def _identify_header_columns(header_line: str) -> tuple[dict[str, int], Optional[str], Optional[str]]:
     """Map semantic BoltzTraP2/BoltzTraP1 header tokens to column indices."""
     clean = header_line.lstrip("#").strip()
     if not clean:
-        return {}, None
+        return {}, None, None
 
     # Split on whitespace while keeping tokens like 'DOS(Ef)' or 'sigma/tau0[1/(Ohm*m*s)]'
     tokens = clean.split()
     mapping: dict[str, int] = {}
     detected_n_unit: Optional[str] = None
+    detected_mu_unit: Optional[str] = None
 
     for idx, raw_tok in enumerate(tokens):
         tok = raw_tok.lower()
@@ -40,6 +41,10 @@ def _identify_header_columns(header_line: str) -> tuple[dict[str, int], Optional
 
         if base in {"ef", "mu", "e_f", "fermi"} or tok.startswith("ef[") or tok.startswith("mu["):
             mapping.setdefault("mu", idx)
+            if "[ev]" in tok or "(ev)" in tok:
+                detected_mu_unit = "eV"
+            elif "[ry]" in tok or "(ry)" in tok:
+                detected_mu_unit = "Ry"
         elif base in {"t", "temp", "temperature"} or tok.startswith("t["):
             mapping.setdefault("T", idx)
         elif base == "n" or tok.startswith("n[") or base in {"carrier", "nelec"}:
@@ -61,7 +66,7 @@ def _identify_header_columns(header_line: str) -> tuple[dict[str, int], Optional
         elif "kappa" in tok:
             mapping.setdefault("kappa_e_tau", idx)
 
-    return mapping, detected_n_unit
+    return mapping, detected_n_unit, detected_mu_unit
 
 
 def parse_boltztrap2_trace(
@@ -91,6 +96,7 @@ def parse_boltztrap2_trace(
 
     header_map: dict[str, int] = {}
     header_n_unit: Optional[str] = None
+    header_mu_unit: Optional[str] = None
     rows: list[list[float]] = []
 
     with file_path.open("r", encoding="utf-8", errors="replace") as handle:
@@ -99,11 +105,13 @@ def parse_boltztrap2_trace(
             if not stripped:
                 continue
             if stripped.startswith("#"):
-                candidate_map, candidate_unit = _identify_header_columns(stripped)
+                candidate_map, candidate_unit, candidate_mu_unit = _identify_header_columns(stripped)
                 if len(candidate_map) >= 4:
                     header_map = candidate_map
                     if candidate_unit is not None:
                         header_n_unit = candidate_unit
+                    if candidate_mu_unit is not None:
+                        header_mu_unit = candidate_mu_unit
                 continue
 
             parts = stripped.split()
@@ -111,11 +119,13 @@ def parse_boltztrap2_trace(
                 nums = [float(p) for p in parts]
             except ValueError:
                 if not rows and not header_map:
-                    candidate_map, candidate_unit = _identify_header_columns(stripped)
+                    candidate_map, candidate_unit, candidate_mu_unit = _identify_header_columns(stripped)
                     if len(candidate_map) >= 4:
                         header_map = candidate_map
                         if candidate_unit is not None:
                             header_n_unit = candidate_unit
+                        if candidate_mu_unit is not None:
+                            header_mu_unit = candidate_mu_unit
                 continue
             rows.append(nums)
 
@@ -191,6 +201,7 @@ def parse_boltztrap2_trace(
     else:
         result["n_unit"] = resolved_unit
 
+    result["mu_unit"] = header_mu_unit or "Ry"
     return result
 
 

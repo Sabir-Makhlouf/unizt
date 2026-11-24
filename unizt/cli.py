@@ -25,6 +25,7 @@ from unizt.core.kappa_l import (
 )
 from unizt.core.relaxation import compute_relaxation_time
 from unizt.core.zt import ZTResult, combine_spin_channels, compute_zt
+from unizt.export import export_research_bundle
 from unizt.parsers.elastic_parser import parse_elastic_tensor
 from unizt.parsers.registry import get_parser, list_parsers
 from unizt.plotting import (
@@ -179,6 +180,45 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tc", type=float, default=None, help="Cold-side temperature T_c in K (default: 300).")
     parser.add_argument("--th", type=float, default=None, help="Hot-side temperature T_h in K (default: max T).")
 
+    # Physical RBA windowing & Fermi reference
+    parser.add_argument(
+        "--ef-window",
+        type=float,
+        default=None,
+        help="Restrict peak search to |mu - E_F| <= ef_window in eV (default: 0.5).",
+    )
+    parser.add_argument(
+        "--max-carrier-density",
+        type=float,
+        default=None,
+        help="Restrict peak search to |n| <= max_carrier_density in cm^-3 (default: 1e21).",
+    )
+    parser.add_argument(
+        "--no-physical-limits",
+        action="store_true",
+        default=None,
+        help="Disable physical RBA constraints (--ef-window and --max-carrier-density).",
+    )
+    parser.add_argument(
+        "--at-ef",
+        action="store_true",
+        default=None,
+        help="Display intrinsic/undoped transport curve evaluated at mu = E_F.",
+    )
+    parser.add_argument(
+        "--ef",
+        type=float,
+        default=None,
+        help="Explicit neutral Fermi level E_F in mu units (inferred automatically if omitted).",
+    )
+    parser.add_argument(
+        "--mu-unit",
+        type=str,
+        choices=["auto", "ry", "ev"],
+        default=None,
+        help="Chemical potential unit in transport input (default: auto).",
+    )
+
     return parser
 
 
@@ -197,6 +237,11 @@ def _merge_config(args: argparse.Namespace) -> dict[str, Any]:
         "t0": 300.0,
         "tau_exp": -1.5,
         "tc": 300.0,
+        "ef_window": 0.5,
+        "max_carrier_density": 1e21,
+        "no_physical_limits": False,
+        "at_ef": False,
+        "mu_unit": "auto",
     }
     cfg: dict[str, Any] = dict(defaults)
 
@@ -215,8 +260,12 @@ def _merge_config(args: argparse.Namespace) -> dict[str, Any]:
             continue
         if val is not None and val is not False:
             cfg[key] = val
-        elif key == "plot" and args.plot:
-            cfg["plot"] = True
+        elif key in {"plot", "no_physical_limits", "at_ef"} and getattr(args, key):
+            cfg[key] = True
+
+    if cfg.get("no_physical_limits"):
+        cfg["ef_window"] = None
+        cfg["max_carrier_density"] = None
 
     return cfg
 
@@ -289,6 +338,13 @@ def _print_summary(
         f"Models              : tau_mode = {cfg['tau_mode']} | kappa_mode = {cfg['kappa_mode']}"
         + (" | two-channel spin-polarized" if cfg.get("trace_up") else "")
     )
+    if zt_res.ef_window_ev is not None or zt_res.max_carrier_density_cm3 is not None:
+        print(
+            f"RBA Constraints     : |mu - E_F| <= {zt_res.ef_window_ev} eV | "
+            f"|n| <= {zt_res.max_carrier_density_cm3:.2e} cm^-3"
+            if zt_res.max_carrier_density_cm3 is not None
+            else f"RBA Constraints     : |mu - E_F| <= {zt_res.ef_window_ev} eV"
+        )
     print(
         f"Overall Peak ZT     : {zt_res.overall_peak_zt:.3f} ({zt_res.overall_peak_type}) "
         f"at T = {zt_res.overall_peak_T:.0f} K (n_opt = {zt_res.overall_peak_n:.3e})"
@@ -412,27 +468,55 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             dtype=np.float64,
         )
 
-    zt_res = compute_zt(transport_data, tau=tau_func, kappa_l=kappa_func, vol_uc_m3=vol_uc)
+    zt_res = compute_zt(
+        transport_data,
+        tau=tau_func,
+        kappa_l=kappa_func,
+        vol_uc_m3=vol_uc,
+        ef_window=cfg.get("ef_window"),
+        max_carrier_density=cfg.get("max_carrier_density"),
+        e_fermi=cfg.get("ef"),
+        mu_unit=cfg.get("mu_unit", "auto"),
+        extract_at_ef=True,
+        warn_unconstrained=True,
+    )
 
-    # Select dominant carrier polarity for engineering integration if multi-temperature
+    # Select dominant carrier polarity and individual legs for engineering integration
     eng_res = None
+    eng_n = None
+    eng_p = None
     eff_sweep = None
     if zt_res.T_grid.size >= 2:
-        regime = (
-            zt_res.n_type if zt_res.overall_peak_type == "n-type" else zt_res.p_type
-        )
+        tc_val = float(cfg["tc"])
+        for reg_key, reg_dict in [("n", zt_res.n_type), ("p", zt_res.p_type)]:
+            v_reg = np.isfinite(reg_dict["zt_max"])
+            if np.sum(v_reg) >= 2:
+                T_r = reg_dict["T"][v_reg]
+                th_v = float(cfg["th"]) if cfg.get("th") is not None else float(np.max(T_r))
+                if tc_val >= float(np.min(T_r)) - 1e-6 and th_v > tc_val:
+                    er = compute_engineering_zt(
+                        T_r,
+                        reg_dict["S_opt"][v_reg],
+                        reg_dict["sigma_opt"][v_reg],
+                        reg_dict["kappa_tot_opt"][v_reg],
+                        T_c=tc_val,
+                        T_h=th_v,
+                    )
+                    if reg_key == "n":
+                        eng_n = er
+                    else:
+                        eng_p = er
+
+        regime = zt_res.n_type if zt_res.overall_peak_type == "n-type" else zt_res.p_type
         valid_reg = np.isfinite(regime["zt_max"])
         if np.sum(valid_reg) >= 2:
             T_reg = regime["T"][valid_reg]
             S_reg = regime["S_opt"][valid_reg]
             sig_reg = regime["sigma_opt"][valid_reg]
             kap_reg = regime["kappa_tot_opt"][valid_reg]
-            tc_val = float(cfg["tc"])
             th_val = float(cfg["th"]) if cfg.get("th") is not None else float(np.max(T_reg))
             if tc_val >= float(np.min(T_reg)) - 1e-6 and th_val > tc_val:
-                eng_res = compute_engineering_zt(
-                    T_reg, S_reg, sig_reg, kap_reg, T_c=tc_val, T_h=th_val
-                )
+                eng_res = eng_n if zt_res.overall_peak_type == "n-type" else eng_p
                 eff_sweep = efficiency_vs_hot_temp(
                     T_reg, S_reg, sig_reg, kap_reg, T_c=tc_val
                 )
@@ -442,7 +526,27 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     rows = zt_res.summary_table()
     _write_csv(rows, outdir / "zt_results.csv")
     _write_latex_table(rows, outdir / "zt_results.tex")
+    export_research_bundle(
+        zt_res,
+        outdir,
+        elastic_props=elastic_props,
+        eng_result=eng_res,
+        eng_result_n=eng_n,
+        eng_result_p=eng_p,
+        tau_mode=cfg["tau_mode"],
+        kappa_mode=cfg["kappa_mode"],
+    )
     _print_summary(cfg, elastic_props, zt_res, eng_res)
+    if cfg.get("at_ef") and zt_res.at_ef is not None:
+        ef_d = zt_res.at_ef
+        print("\nIntrinsic Transport at mu = E_F (selected temperatures):")
+        print(f"{'T(K)':>6} {'S_tot(uV/K)':>13} {'sigma(S/m)':>13} {'PF(mW/mK2)':>12} {'kappa_tot':>11} {'ZT(E_F)':>9}")
+        step = max(1, len(ef_d["T"]) // 10)
+        for idx in range(0, len(ef_d["T"]), step):
+            print(
+                f"{ef_d['T'][idx]:6.0f} {ef_d['S'][idx]*1e6:13.2f} {ef_d['sigma'][idx]:13.3e} "
+                f"{ef_d['pf'][idx]:12.4f} {ef_d['kappa_tot'][idx]:11.4f} {ef_d['zt'][idx]:9.4f}"
+            )
 
     if cfg.get("plot"):
         kappa_cahill = None

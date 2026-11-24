@@ -1,0 +1,133 @@
+{
+  "tool": "UniZT v0.2.0",
+  "author": "Dr. Sabir Makhlouf",
+  "generated_utc": "2026-11-24T19:24:45.349181+00:00",
+  "material": "cubic $\\mathrm{Cs_2VBr_6}$ ($Fm\\bar{3}m$)",
+  "spin_polarized": true,
+  "models": {
+    "tau_mode": "dpt (m_eff=0.5, E1=9.0 eV)",
+    "kappa_mode": "slack + cahill_floor"
+  },
+  "constraints": {
+    "e_fermi_native": 0.21102907144133648,
+    "e_fermi_eV": 2.8711967860603576,
+    "mu_unit": "Ry",
+    "ef_window_eV": 0.5,
+    "max_carrier_density_cm3": 1e+21,
+    "valid_grid_points": 463,
+    "total_grid_points": 116220
+  },
+  "elastic_and_acoustic": {
+    "born_stable": true,
+    "min_eigenvalue_GPa": 12.06,
+    "B_VRH_GPa": 29.87000000000001,
+    "G_VRH_GPa": 10.126863636363636,
+    "E_GPa": 27.295872880958118,
+    "poisson_ratio": 0.34769627898137423,
+    "pugh_ratio_B_G": 2.949580548585896,
+    "anisotropy_index": 0.23150401836968904,
+    "longitudinal_modulus_C3d_GPa": 43.37248484848486,
+    "density_kg_m3": 3951.6057219366585,
+    "v_l_m_s": 3312.991710148892,
+    "v_t_m_s": 1600.8501395531932,
+    "v_m_m_s": 1799.2997085704958,
+    "theta_D_K": 160.5089642689366,
+    "gruneisen_gamma": 2.112572719933895,
+    "vol_atom_m3": 3.717425577777777e-29
+  },
+  "thermal_and_scattering": {
+    "T_ref_K": 300.0,
+    "T_max_K": 1280.0,
+    "kappa_L_300K_W_mK": 0.3174454176362667,
+    "kappa_L_Tmax_W_mK": 0.32497584553451897,
+    "kappa_min_300K_W_mK": 0.3174454176362667,
+    "kappa_min_Tmax_W_mK": 0.32497584553451897,
+    "tau_300K_s": 5.2615840233502095e-14,
+    "tau_Tmax_s": 5.970125184699134e-15
+  },
+  "intrinsic_at_ef": {
+    "ZT_peak": 0.04384337531461999,
+    "T_peak_K": 440.0,
+    "S_at_peak_uV_K": 19.027863796497524,
+    "S_at_300K_uV_K": 16.680906952331313,
+    "ZT_at_300K": 0.03014430570093285
+  },
+  "constrained_optimal": {
+    "overall_peak_ZT": 0.38603665454167735,
+    "overall_peak_type": "n-type",
+    "overall_peak_T_K": 620.0,
+    "overall_peak_n_cm3": -9.470472271304011e+20,
+    "n_type": {
+      "ZT_max": 0.38603665454167735,
+      "T_opt_K": 620.0,
+      "n_opt_cm3": -9.470472271304011e+20,
+      "dmu_eV": 0.030788711528426056,
+      "S_uV_K": 60.51954710720533,
+      "PF_mW_mK2": 0.26240450387163244,
+      "sigma_S_m": 71644.01996126403,
+      "kappa_tot_W_mK": 0.4214387169880721
+    },
+    "p_type": {
+      "ZT_max": 0.17502074635346254,
+      "T_opt_K": 740.0,
+      "n_opt_cm3": 4.2139310736790086e+19,
+      "dmu_eV": 0.022176307781573083,
+      "S_uV_K": 42.73300022820868,
+      "PF_mW_mK2": 0.09181555345452208,
+      "sigma_S_m": 50279.33050170791,
+      "kappa_tot_W_mK": 0.3882026043880036
+    }
+  },
+  "unconstrained_reference": {
+    "peak_ZT": 7.722397665193951,
+    "peak_n_cm3": 1.2127646662910175e+22
+  },
+  "device_efficiency": {
+    "dominant_or_single": {
+      "T_c_K": 300.0,
+      "T_h_K": 1000.0,
+      "ZT_eng": 0.25581178792721004,
+      "PF_eng_W_mK": 0.1245891313241603,
+      "eta_max_pct": 5.571154521768613,
+      "eta_carnot_pct": 70.0
+    },
+    "n_type": {
+      "T_c_K": 300.0,
+      "T_h_K": 1000.0,
+      "ZT_eng": 0.25581178792721004,
+      "PF_eng_W_mK": 0.1245891313241603,
+      "eta_max_pct": 5.571154521768613,
+      "eta_carnot_pct": 70.0
+    },
+    "p_type": {
+      "T_c_K": 300.0,
+      "T_h_K": 1000.0,
+      "ZT_eng": 0.10277672044352679,
+      "PF_eng_W_mK": 0.05219487727352348,
+      "eta_max_pct": 2.417873442284373,
+      "eta_carnot_pct": 70.0
+    }
+  },
+  "provenance": {
+    "reference": "S. Makhlouf et al., J. Am. Ceram. Soc. 109(5), e70769 (2026)",
+    "doi": "10.1111/jace.70769",
+    "space_group": "Fm-3m (No. 225)",
+    "a0_angstrom": 11.02,
+    "V_prim_m3": 3.3456830199999993e-28,
+    "n_atoms_prim": 9,
+    "C11_GPa": 40.27,
+    "C12_GPa": 24.67,
+    "C44_GPa": 12.06,
+    "published_reference_peak_ZT": 0.95,
+    "dpt_parameters": {
+      "m_eff_m0": 0.5,
+      "E1_eV": 9.0,
+      "C_3d_GPa": 43.37248484848486
+    },
+    "crta_comparison_1e_14s": {
+      "constrained_n_peak_ZT": 0.35367376684683577,
+      "constrained_p_peak_ZT": 0.1868429288460669,
+      "intrinsic_ef_peak_ZT": 0.025079225243991178
+    }
+  }
+}

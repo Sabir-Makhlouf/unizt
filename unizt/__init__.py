@@ -40,6 +40,7 @@ from unizt.core import (
     compute_relaxation_time,
     compute_zt,
     efficiency_vs_hot_temp,
+    optimize_zt,
     slack_kappa_l,
     tau_constant,
     tau_dpt,
@@ -47,6 +48,7 @@ from unizt.core import (
     validate_elastic_tensor,
     validate_transport_data,
 )
+from unizt.export import export_research_bundle
 from unizt.parsers import (
     PARSER_REGISTRY,
     get_parser,
@@ -77,8 +79,10 @@ __all__ = [
     "compute_relaxation_time",
     "compute_zt",
     "efficiency_vs_hot_temp",
+    "export_research_bundle",
     "get_parser",
     "list_parsers",
+    "optimize_zt",
     "parse_boltztrap2_trace",
     "parse_elastic_tensor",
     "parse_generic_transport",

@@ -1,0 +1,35 @@
+============================================================================
+UniZT v0.2.0 | Researcher Summary Report — cubic $\mathrm{Cs_2VBr_6}$ ($Fm\bar{3}m$)
+============================================================================
+Spin Mode           : Two-channel spin-polarized (up + dn)
+Models              : tau=dpt (m_eff=0.5, E1=9.0 eV) | kappa_L=slack + cahill_floor
+Neutral Fermi E_F   : 0.211029 Ry (2.8712 eV)
+Physical Window     : |mu - E_F| <= 0.5 eV | |n| <= 1.00e+21 cm^-3 
+Grid Points Kept    : 463 / 116220
+
+[1] Elastic & Acoustic Summary
+  Born Stability    : PASS (min eig = 12.06 GPa > 0)
+  VRH Moduli        : B = 29.87 GPa | G = 10.13 GPa | E = 27.30 GPa
+  Poisson / Pugh    : nu = 0.3477 | B/G = 2.95
+  Sound Velocities  : v_l = 3313.0 m/s | v_t = 1600.9 m/s | v_m = 1799.3 m/s
+  Debye & Gruneisen : theta_D = 160.51 K | gamma = 2.113
+
+[2] Thermal Conductivity & Carrier Scattering
+  kappa_L(T=300 K) : 0.3174 W/m/K | kappa_min = 0.3174 W/m/K
+  kappa_L(T=1280 K) : 0.3250 W/m/K | kappa_min = 0.3250 W/m/K
+  tau(T=300 K)     : 5.262e-14 s (52.62 fs)
+  tau(T=1280 K)     : 5.970e-15 s (5.97 fs)
+
+[3] Intrinsic Transport at Neutral Fermi Level (mu = E_F)
+  At 300 K          : ZT = 0.0301 | S = 16.68 uV/K
+  Intrinsic Peak ZT : 0.0438 at T = 440 K (S = 19.03 uV/K)
+
+[4] Physically Constrained Optimal Doping Summary
+  n-type (n < 0)    : ZT_max = 0.3860 at T = 620 K | n_opt = -9.47e+20 cm^-3 | dmu = +0.031 eV | S = 60.5 uV/K | PF = 0.262 mW/m/K^2
+  p-type (n > 0)    : ZT_max = 0.1750 at T = 740 K | n_opt = 4.21e+19 cm^-3 | dmu = +0.022 eV | S = 42.7 uV/K | PF = 0.092 mW/m/K^2
+  Unconstrained Ref : ZT_raw = 7.722 at |n| = 1.21e+22 cm^-3
+
+[5] Kim et al. Device Engineering Efficiency
+  n-type (300->1000 K) : ZT_eng = 0.256 | eta_max = 5.57% (Carnot = 70.00%)
+  p-type (300->1000 K) : ZT_eng = 0.103 | eta_max = 2.42% (Carnot = 70.00%)
+============================================================================

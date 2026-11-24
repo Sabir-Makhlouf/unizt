@@ -1,17 +1,21 @@
-"""True thermoelectric figure of merit ZT(T, n), power factor PF, and
-n-type / p-type optimal carrier concentration extraction.
+"""True thermoelectric figure of merit ZT(T, n), physical RBA windowing,
+spin-polarized two-channel combination, and n-type / p-type optimal extraction.
 """
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping, Optional, Union
 
 import numpy as np
+from scipy import constants as const
 
 from unizt.core.validator import ValidationError, validate_transport_data
 
 ScalarOrCallableOrArray = Union[float, np.ndarray, Callable[[np.ndarray], np.ndarray]]
+
+RY_TO_EV = float(const.physical_constants["Rydberg constant times hc in eV"][0])
 
 
 def _resolve_temp_dependent(
@@ -43,6 +47,60 @@ def _resolve_temp_dependent(
     return arr
 
 
+def _infer_fermi_energy(
+    T: np.ndarray,
+    mu: np.ndarray,
+    n: np.ndarray,
+    e_fermi: Optional[float] = None,
+    mu_unit: str = "eV",
+) -> tuple[float, float, np.ndarray]:
+    """Resolve neutral Fermi level ``E_F`` and compute ``mu - E_F`` in eV."""
+    unit_low = mu_unit.strip().lower()
+    scale_to_ev = RY_TO_EV if unit_low == "ry" else 1.0
+
+    if e_fermi is not None:
+        ef_native = float(e_fermi)
+    elif mu.size == 0 or np.allclose(mu, mu[0]):
+        ef_native = float(mu[0]) if mu.size else 0.0
+    else:
+        T_unique = np.unique(np.round(T, 6))
+        # Use T closest to 300 K as reference for neutrality crossing
+        T_ref = float(T_unique[int(np.argmin(np.abs(T_unique - 300.0)))])
+        ref_mask = np.round(T, 6) == T_ref
+        mu_ref = mu[ref_mask]
+        n_ref = n[ref_mask]
+        order = np.argsort(mu_ref)
+        mu_ref = mu_ref[order]
+        n_ref = n_ref[order]
+
+        max_n = float(np.max(np.abs(n_ref))) if n_ref.size else 0.0
+        zero_tol = max(1e-12 * max_n, 1e-30)
+        zero_idx = np.where(np.abs(n_ref) <= zero_tol)[0]
+
+        if zero_idx.size >= 2 and np.any(np.diff(zero_idx) == 1):
+            # Insulating gap plateau: choose midpoint of zero-carrier plateau
+            ef_native = float(0.5 * (mu_ref[zero_idx[0]] + mu_ref[zero_idx[-1]]))
+        else:
+            cross_idx = np.where(
+                ((n_ref[:-1] >= 0.0) & (n_ref[1:] <= 0.0))
+                | ((n_ref[:-1] <= 0.0) & (n_ref[1:] >= 0.0))
+            )[0]
+            if cross_idx.size > 0:
+                idx = int(cross_idx[0])
+                dn_val = float(n_ref[idx + 1] - n_ref[idx])
+                if abs(dn_val) > 0.0:
+                    frac = -float(n_ref[idx]) / dn_val
+                    ef_native = float(mu_ref[idx] + frac * (mu_ref[idx + 1] - mu_ref[idx]))
+                else:
+                    ef_native = float(0.5 * (mu_ref[idx] + mu_ref[idx + 1]))
+            else:
+                ef_native = float(mu_ref[int(np.argmin(np.abs(n_ref)))])
+
+    ef_ev = ef_native * scale_to_ev
+    dmu_ev = (mu - ef_native) * scale_to_ev
+    return ef_native, ef_ev, dmu_ev
+
+
 @dataclass
 class ZTResult:
     """Complete thermoelectric post-processing output across (T, mu/n) grids."""
@@ -69,6 +127,26 @@ class ZTResult:
     overall_peak_type: str
     overall_peak_T: float
     overall_peak_n: float
+    # Physical windowing, Fermi reference, and intrinsic curve metadata
+    e_fermi: float = 0.0
+    e_fermi_ev: float = 0.0
+    mu_unit: str = "eV"
+    n_unit: str = "m^-3"
+    dmu_ev: Optional[np.ndarray] = None
+    ef_window_ev: Optional[float] = None
+    max_carrier_density_cm3: Optional[float] = None
+    physical_mask: Optional[np.ndarray] = None
+    at_ef: Optional[dict[str, np.ndarray]] = None
+    unconstrained_peak_zt: Optional[float] = None
+    unconstrained_peak_n: Optional[float] = None
+    spin_polarized: bool = False
+    S_up: Optional[np.ndarray] = None
+    S_dn: Optional[np.ndarray] = None
+    sigma_up: Optional[np.ndarray] = None
+    sigma_dn: Optional[np.ndarray] = None
+    kappa_e_up: Optional[np.ndarray] = None
+    kappa_e_dn: Optional[np.ndarray] = None
+    kappa_e_mix: Optional[np.ndarray] = None
 
     def summary_table(self) -> list[dict[str, float]]:
         """Return per-temperature summary rows for CSV / LaTeX / CLI reporting."""
@@ -81,10 +159,12 @@ class ZTResult:
                     "kappa_L_W_m_K": float(self.kappa_l_grid[idx]),
                     "ZT_max_n": float(self.n_type["zt_max"][idx]),
                     "n_opt_n": float(self.n_type["n_opt"][idx]),
+                    "dmu_n_eV": float(self.n_type["dmu_opt_eV"][idx]),
                     "PF_n_mW_m_K2": float(self.n_type["pf_opt"][idx]),
                     "S_n_uV_K": float(self.n_type["S_opt"][idx] * 1e6),
                     "ZT_max_p": float(self.p_type["zt_max"][idx]),
                     "n_opt_p": float(self.p_type["n_opt"][idx]),
+                    "dmu_p_eV": float(self.p_type["dmu_opt_eV"][idx]),
                     "PF_p_mW_m_K2": float(self.p_type["pf_opt"][idx]),
                     "S_p_uV_K": float(self.p_type["S_opt"][idx] * 1e6),
                 }
@@ -97,6 +177,7 @@ def _extract_regime(
     T_rounded: np.ndarray,
     mask_regime: np.ndarray,
     mu: np.ndarray,
+    dmu_ev: np.ndarray,
     n: np.ndarray,
     S: np.ndarray,
     sigma: np.ndarray,
@@ -112,6 +193,7 @@ def _extract_regime(
         "zt_max": np.full(n_t, np.nan, dtype=np.float64),
         "n_opt": np.full(n_t, np.nan, dtype=np.float64),
         "mu_opt": np.full(n_t, np.nan, dtype=np.float64),
+        "dmu_opt_eV": np.full(n_t, np.nan, dtype=np.float64),
         "S_opt": np.full(n_t, np.nan, dtype=np.float64),
         "sigma_opt": np.full(n_t, np.nan, dtype=np.float64),
         "pf_opt": np.full(n_t, np.nan, dtype=np.float64),
@@ -127,6 +209,7 @@ def _extract_regime(
         out["zt_max"][i] = zt[best_local]
         out["n_opt"][i] = n[best_local]
         out["mu_opt"][i] = mu[best_local]
+        out["dmu_opt_eV"][i] = dmu_ev[best_local]
         out["S_opt"][i] = S[best_local]
         out["sigma_opt"][i] = sigma[best_local]
         out["pf_opt"][i] = pf[best_local]
@@ -136,18 +219,87 @@ def _extract_regime(
     return out
 
 
+def _extract_at_fermi(
+    T_grid: np.ndarray,
+    T_rounded: np.ndarray,
+    mu: np.ndarray,
+    e_fermi: float,
+    n: np.ndarray,
+    S: np.ndarray,
+    sigma: np.ndarray,
+    pf: np.ndarray,
+    kappa_e: np.ndarray,
+    kappa_l: np.ndarray,
+    kappa_tot: np.ndarray,
+    zt: np.ndarray,
+    *,
+    S_up: Optional[np.ndarray] = None,
+    S_dn: Optional[np.ndarray] = None,
+    kappa_e_mix: Optional[np.ndarray] = None,
+) -> dict[str, np.ndarray]:
+    """Evaluate exact intrinsic/undoped transport curve at ``mu = E_F`` vs ``T``."""
+    n_t = len(T_grid)
+    out: dict[str, np.ndarray] = {
+        "T": T_grid.copy(),
+        "n": np.zeros(n_t, dtype=np.float64),
+        "S": np.zeros(n_t, dtype=np.float64),
+        "S_up": np.full(n_t, np.nan, dtype=np.float64),
+        "S_dn": np.full(n_t, np.nan, dtype=np.float64),
+        "sigma": np.zeros(n_t, dtype=np.float64),
+        "pf": np.zeros(n_t, dtype=np.float64),
+        "kappa_e": np.zeros(n_t, dtype=np.float64),
+        "kappa_e_mix": np.zeros(n_t, dtype=np.float64),
+        "kappa_l": np.zeros(n_t, dtype=np.float64),
+        "kappa_tot": np.zeros(n_t, dtype=np.float64),
+        "zt": np.zeros(n_t, dtype=np.float64),
+    }
+
+    for i, temp in enumerate(T_grid):
+        m = T_rounded == np.round(temp, 6)
+        mu_k = mu[m]
+        order = np.argsort(mu_k)
+        mu_s = mu_k[order]
+
+        if mu_s.size == 1 or e_fermi <= mu_s[0] or e_fermi >= mu_s[-1]:
+            idx_nearest = int(np.argmin(np.abs(mu_s - e_fermi)))
+            interp = lambda arr: float(arr[m][order][idx_nearest])
+        else:
+            interp = lambda arr: float(np.interp(e_fermi, mu_s, arr[m][order]))
+
+        n_val = interp(n)
+        s_val = interp(S)
+        sig_val = interp(sigma)
+        ke_val = interp(kappa_e)
+        kl_val = interp(kappa_l)
+        ktot_val = ke_val + kl_val
+        pf_val = (s_val ** 2) * sig_val * 1e3
+        zt_val = ((s_val ** 2) * sig_val * temp / ktot_val) if ktot_val > 0.0 else 0.0
+
+        out["n"][i] = n_val
+        out["S"][i] = s_val
+        out["sigma"][i] = sig_val
+        out["pf"][i] = pf_val
+        out["kappa_e"][i] = ke_val
+        out["kappa_l"][i] = kl_val
+        out["kappa_tot"][i] = ktot_val
+        out["zt"][i] = zt_val
+
+        if S_up is not None and S_dn is not None:
+            out["S_up"][i] = interp(S_up)
+            out["S_dn"][i] = interp(S_dn)
+        if kappa_e_mix is not None:
+            out["kappa_e_mix"][i] = interp(kappa_e_mix)
+
+    return out
+
+
 def _align_spin_channel_grid(
     up_data: Mapping[str, Any],
     dn_data: Mapping[str, Any],
     sigma_key: str,
     kappa_key: str,
 ) -> tuple[np.ndarray, ...]:
-    """Align spin-up and spin-down channels onto a common (T, mu) grid.
-
-    Uses exact point-to-point values when (T, mu) grids match; otherwise intersects
-    temperatures and linearly interpolates spin-down quantities onto the overlapping
-    spin-up chemical potential grid at each temperature.
-    """
+    """Align spin-up and spin-down channels onto a common (T, mu) grid."""
     T_up = np.asarray(up_data["T"], dtype=np.float64)
     T_dn = np.asarray(dn_data["T"], dtype=np.float64)
     mu_up = np.asarray(up_data["mu"], dtype=np.float64) if "mu" in up_data else np.zeros_like(T_up)
@@ -269,18 +421,14 @@ def combine_spin_channels(
 ) -> dict[str, Any]:
     """Combine spin-up and spin-down transport channels using the exact two-current model.
 
-    Aligns matching ``(T, Ef)`` grids (interpolating spin-down onto overlapping
-    spin-up chemical potentials if endpoints differ slightly) and computes:
+    Aligns matching ``(T, Ef)`` grids and computes:
 
       1. ``sigma_tot = sigma_up + sigma_dn``
       2. ``S_tot = (sigma_up * S_up + sigma_dn * S_dn) / (sigma_up + sigma_dn)``
-         (safely returns ``0.0`` where ``sigma_tot == 0``)
-      3. ``kappa_e_tot = kappa_e_up + kappa_e_dn + (sigma_up * sigma_dn / (sigma_up + sigma_dn)) * (S_up - S_dn)^2 * T``
-      4. ``PF_tot = S_tot^2 * sigma_tot``
-      5. ``ZT_tot = (S_tot^2 * sigma_tot * T) / (kappa_e_tot + kappa_L(T))`` (when ``kappa_l`` is given)
-
-    Supports both BoltzTraP2 ``(sigma_tau, kappa_e_tau)`` inputs and direct
-    ``(sigma, kappa_e)`` inputs.
+      3. ``kappa_e_mix = (sigma_up * sigma_dn / (sigma_up + sigma_dn)) * (S_up - S_dn)^2 * T``
+      4. ``kappa_e_tot = kappa_e_up + kappa_e_dn + kappa_e_mix``
+      5. ``PF_tot = S_tot^2 * sigma_tot``
+      6. ``ZT_tot = (S_tot^2 * sigma_tot * T) / (kappa_e_tot + kappa_L(T))`` (when ``kappa_l`` is given)
     """
     has_tau_norm = ("sigma_tau" in up_data) and ("sigma_tau" in dn_data)
     has_direct = ("sigma" in up_data) and ("sigma" in dn_data)
@@ -349,6 +497,7 @@ def combine_spin_channels(
         "S_up": S_up,
         "S_dn": S_dn,
         "n_unit": up_clean.get("n_unit", "m^-3"),
+        "mu_unit": up_clean.get("mu_unit", dn_clean.get("mu_unit", "eV")),
         "spin_polarized": True,
     }
 
@@ -417,13 +566,20 @@ def compute_zt(
     *,
     vol_uc_m3: Optional[float] = None,
     n_unit: Optional[str] = None,
+    ef_window: Optional[float] = None,
+    max_carrier_density: Optional[float] = None,
+    e_fermi: Optional[float] = None,
+    mu_unit: str = "auto",
+    extract_at_ef: bool = True,
+    warn_unconstrained: bool = True,
 ) -> ZTResult:
     """Combine BoltzTraP2/generic transport coefficients with ``tau(T)`` and ``kappa_L(T)``
     to compute Power Factor (mW/m/K^2), ``kappa_tot``, and true ``ZT(T, n)``.
 
-    Carrier regimes follow BoltzTraP convention:
-      - n-type: ``n < 0``
-      - p-type: ``n > 0``
+    Optional physical Rigid Band Approximation (RBA) windowing:
+      - ``ef_window`` (eV): restricts peak optimization to ``|mu - E_F| <= ef_window``.
+      - ``max_carrier_density`` (cm^-3): restricts optimization to ``|n| <= max_carrier_density``.
+      - ``extract_at_ef``: extracts intrinsic transport curve at ``mu = E_F``.
     """
     data = validate_transport_data(
         transport_data,
@@ -444,6 +600,13 @@ def compute_zt(
     kappa_e_tau = data["kappa_e_tau"]
     mu = data["mu"] if "mu" in data else np.zeros_like(T)
 
+    resolved_n_unit = str(data.get("n_unit", "m^-3"))
+    resolved_mu_unit = (
+        str(data.get("mu_unit", "eV"))
+        if mu_unit.strip().lower() == "auto"
+        else mu_unit.strip()
+    )
+
     tau_arr = _resolve_temp_dependent(tau, T, "tau")
     kappa_l_arr = _resolve_temp_dependent(kappa_l, T, "kappa_l")
 
@@ -457,20 +620,74 @@ def compute_zt(
 
     zt = (S ** 2) * sigma * T / kappa_tot
 
+    ef_native, ef_ev, dmu_ev = _infer_fermi_energy(
+        T, mu, n, e_fermi=e_fermi, mu_unit=resolved_mu_unit
+    )
+
+    phys_mask = np.ones(T.shape, dtype=bool)
+    if ef_window is not None:
+        if float(ef_window) <= 0.0:
+            raise ValidationError("ef_window must be strictly positive (eV).")
+        phys_mask &= np.abs(dmu_ev) <= float(ef_window)
+    if max_carrier_density is not None:
+        if float(max_carrier_density) <= 0.0:
+            raise ValidationError("max_carrier_density must be strictly positive (cm^-3).")
+        if resolved_n_unit != "m^-3":
+            raise ValidationError(
+                "max_carrier_density filtering requires carrier density in SI m^-3 "
+                "(supply vol_uc_m3 or n_unit='m^-3'/'cm^-3')."
+            )
+        max_n_m3 = float(max_carrier_density) * 1e6
+        phys_mask &= np.abs(n) <= max_n_m3
+
+    if not np.any(phys_mask):
+        raise ValidationError(
+            "No transport grid points satisfy the physical windowing constraints "
+            f"(ef_window={ef_window} eV, max_carrier_density={max_carrier_density} cm^-3)."
+        )
+
     T_rounded = np.round(T, 6)
     T_grid, first_idx = np.unique(T_rounded, return_index=True)
     tau_grid = tau_arr[first_idx]
     kappa_l_grid = kappa_l_arr[first_idx]
 
     n_type_res = _extract_regime(
-        T_grid, T_rounded, n < 0.0, mu, n, S, sigma, pf, kappa_e, kappa_l_arr, kappa_tot, zt
+        T_grid,
+        T_rounded,
+        phys_mask & (n < 0.0),
+        mu,
+        dmu_ev,
+        n,
+        S,
+        sigma,
+        pf,
+        kappa_e,
+        kappa_l_arr,
+        kappa_tot,
+        zt,
     )
     p_type_res = _extract_regime(
-        T_grid, T_rounded, n > 0.0, mu, n, S, sigma, pf, kappa_e, kappa_l_arr, kappa_tot, zt
+        T_grid,
+        T_rounded,
+        phys_mask & (n > 0.0),
+        mu,
+        dmu_ev,
+        n,
+        S,
+        sigma,
+        pf,
+        kappa_e,
+        kappa_l_arr,
+        kappa_tot,
+        zt,
     )
 
-    best_n_val = np.nanmax(n_type_res["zt_max"]) if np.any(np.isfinite(n_type_res["zt_max"])) else -np.inf
-    best_p_val = np.nanmax(p_type_res["zt_max"]) if np.any(np.isfinite(p_type_res["zt_max"])) else -np.inf
+    best_n_val = (
+        np.nanmax(n_type_res["zt_max"]) if np.any(np.isfinite(n_type_res["zt_max"])) else -np.inf
+    )
+    best_p_val = (
+        np.nanmax(p_type_res["zt_max"]) if np.any(np.isfinite(p_type_res["zt_max"])) else -np.inf
+    )
 
     if best_n_val >= best_p_val and np.isfinite(best_n_val):
         idx = int(np.nanargmax(n_type_res["zt_max"]))
@@ -485,11 +702,59 @@ def compute_zt(
         peak_T = float(T_grid[idx])
         peak_n = float(p_type_res["n_opt"][idx])
     else:
-        idx = int(np.argmax(zt))
+        cand = np.where(phys_mask)[0]
+        idx = int(cand[int(np.argmax(zt[cand]))])
         peak_zt = float(zt[idx])
         peak_type = "intrinsic"
         peak_T = float(T[idx])
         peak_n = float(n[idx])
+
+    raw_best_idx = int(np.argmax(zt))
+    raw_peak_zt = float(zt[raw_best_idx])
+    raw_peak_n = float(n[raw_best_idx])
+
+    if (
+        warn_unconstrained
+        and max_carrier_density is None
+        and resolved_n_unit == "m^-3"
+        and abs(peak_n) > 1e27  # 1e21 cm^-3
+    ):
+        warnings.warn(
+            f"Unconstrained peak ZT ({peak_zt:.3f}) occurs at |n|={abs(peak_n)*1e-6:.2e} cm^-3 "
+            "(> 1e21 cm^-3), where the Rigid Band Approximation may break down. "
+            "Consider specifying ef_window and max_carrier_density.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    spin_pol = bool(data.get("spin_polarized", False))
+    S_up = data.get("S_up")
+    S_dn = data.get("S_dn")
+    sig_up = data["sigma_tau_up"] * tau_arr if "sigma_tau_up" in data else data.get("sigma_up")
+    sig_dn = data["sigma_tau_dn"] * tau_arr if "sigma_tau_dn" in data else data.get("sigma_dn")
+    ke_up = data["kappa_e_tau_up"] * tau_arr if "kappa_e_tau_up" in data else data.get("kappa_e_up")
+    ke_dn = data["kappa_e_tau_dn"] * tau_arr if "kappa_e_tau_dn" in data else data.get("kappa_e_dn")
+    ke_mix = data["kappa_e_mix_tau"] * tau_arr if "kappa_e_mix_tau" in data else data.get("kappa_e_mix")
+
+    at_ef_res = None
+    if extract_at_ef:
+        at_ef_res = _extract_at_fermi(
+            T_grid,
+            T_rounded,
+            mu,
+            ef_native,
+            n,
+            S,
+            sigma,
+            pf,
+            kappa_e,
+            kappa_l_arr,
+            kappa_tot,
+            zt,
+            S_up=S_up,
+            S_dn=S_dn,
+            kappa_e_mix=ke_mix,
+        )
 
     return ZTResult(
         T=T,
@@ -514,4 +779,57 @@ def compute_zt(
         overall_peak_type=peak_type,
         overall_peak_T=peak_T,
         overall_peak_n=peak_n,
+        e_fermi=ef_native,
+        e_fermi_ev=ef_ev,
+        mu_unit=resolved_mu_unit,
+        n_unit=resolved_n_unit,
+        dmu_ev=dmu_ev,
+        ef_window_ev=float(ef_window) if ef_window is not None else None,
+        max_carrier_density_cm3=(
+            float(max_carrier_density) if max_carrier_density is not None else None
+        ),
+        physical_mask=phys_mask,
+        at_ef=at_ef_res,
+        unconstrained_peak_zt=raw_peak_zt,
+        unconstrained_peak_n=raw_peak_n,
+        spin_polarized=spin_pol,
+        S_up=S_up,
+        S_dn=S_dn,
+        sigma_up=sig_up,
+        sigma_dn=sig_dn,
+        kappa_e_up=ke_up,
+        kappa_e_dn=ke_dn,
+        kappa_e_mix=ke_mix,
+    )
+
+
+def optimize_zt(
+    transport_data: Mapping[str, Any],
+    tau: ScalarOrCallableOrArray,
+    kappa_l: ScalarOrCallableOrArray,
+    *,
+    vol_uc_m3: Optional[float] = None,
+    n_unit: Optional[str] = None,
+    ef_window: Optional[float] = 0.5,
+    max_carrier_density: Optional[float] = 1e21,
+    e_fermi: Optional[float] = None,
+    mu_unit: str = "auto",
+    extract_at_ef: bool = True,
+    warn_unconstrained: bool = True,
+) -> ZTResult:
+    """Physically constrained optimal ZT extractor (defaults: ``|mu - E_F| <= 0.5 eV``
+    and ``|n| <= 1e21 cm^-3``).
+    """
+    return compute_zt(
+        transport_data,
+        tau=tau,
+        kappa_l=kappa_l,
+        vol_uc_m3=vol_uc_m3,
+        n_unit=n_unit,
+        ef_window=ef_window,
+        max_carrier_density=max_carrier_density,
+        e_fermi=e_fermi,
+        mu_unit=mu_unit,
+        extract_at_ef=extract_at_ef,
+        warn_unconstrained=warn_unconstrained,
     )

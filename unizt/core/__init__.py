@@ -32,7 +32,7 @@ from unizt.core.validator import (
     validate_elastic_tensor,
     validate_transport_data,
 )
-from unizt.core.zt import ZTResult, combine_spin_channels, compute_zt
+from unizt.core.zt import ZTResult, combine_spin_channels, compute_zt, optimize_zt
 
 __all__ = [
     "BornStabilityError",
@@ -53,6 +53,7 @@ __all__ = [
     "gruneisen_from_poisson",
     "isotropic_tensor_from_moduli",
     "load_custom_kappa_csv",
+    "optimize_zt",
     "slack_kappa_l",
     "sound_velocities",
     "tau_constant",
