@@ -1,6 +1,6 @@
 """Transport and elastic parsers for UniZT (stdlib + NumPy only)."""
 
-from unizt.parsers.boltztrap2 import parse_boltztrap2_trace
+from unizt.parsers.boltztrap2 import parse_boltztrap2_trace, parse_spin_polarized_traces
 from unizt.parsers.elastic_parser import parse_elastic_tensor
 from unizt.parsers.generic import parse_generic_transport
 from unizt.parsers.registry import (
@@ -17,5 +17,6 @@ __all__ = [
     "parse_boltztrap2_trace",
     "parse_elastic_tensor",
     "parse_generic_transport",
+    "parse_spin_polarized_traces",
     "register_parser",
 ]

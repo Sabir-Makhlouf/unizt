@@ -1,0 +1,108 @@
+{
+  "tool": "UniZT v0.2.0",
+  "author": "Dr. Sabir Makhlouf",
+  "generated_utc": "2026-11-24T18:50:22.838268+00:00",
+  "material": {
+    "formula": "Cs2VBr6",
+    "structure": "Vacancy-ordered double perovskite, cubic Fm-3m (No. 225)",
+    "reference": "S. Makhlouf et al., J. Am. Ceram. Soc. 109(5), e70769 (2026)",
+    "doi": "10.1111/jace.70769",
+    "trace_up": "examples\\cs2vbr6\\up.trace",
+    "trace_dn": "examples\\cs2vbr6\\dn.trace",
+    "n_rows_up": 117240,
+    "n_rows_dn": 117360,
+    "n_rows_combined": 116220,
+    "neutral_fermi_energy_Ry": 0.211075
+  },
+  "assumed_and_derived_parameters": {
+    "lattice_parameter_angstrom": 10.6,
+    "n_atoms_primitive": 9,
+    "primitive_cell_volume_m3": 2.9775400000000004e-28,
+    "atomic_volume_m3": 3.308377777777779e-29,
+    "average_atomic_mass_amu": 88.46404444444445,
+    "density_kg_m3": 4440.182219422179,
+    "elastic_tensor_GPa": [
+      [
+        39.5,
+        17.5,
+        17.5,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        17.5,
+        39.5,
+        17.5,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        17.5,
+        17.5,
+        39.5,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        11.2,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        11.2,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        11.2
+      ]
+    ],
+    "B_VRH_GPa": 24.83333333333333,
+    "G_VRH_GPa": 11.11956678700361,
+    "E_GPa": 29.026346081355605,
+    "poisson_ratio": 0.3051923081788214,
+    "pugh_ratio": 2.2333004341822176,
+    "debye_temperature_K": 164.03869771013953,
+    "gruneisen_gamma": 1.8053732962399174,
+    "dpt_m_eff_m0": 0.85,
+    "dpt_E1_eV": 11.0,
+    "dpt_C3d_GPa": 39.65942238267147,
+    "tau_300K_s": 1.4530309242450126e-14,
+    "tau_900K_s": 2.7963593175123623e-15,
+    "kappa_L_model": "Slack (n-scaled acoustic cutoff) floored by Cahill-Pohl kappa_min",
+    "kappa_L_300K_W_m_K": 0.32496169333845876
+  },
+  "results_summary": {
+    "full_grid_peak_ZT": 3.9023590142805973,
+    "full_grid_peak_type": "p-type",
+    "full_grid_peak_T_K": 660.0,
+    "n_type_peak_ZT": 2.030034096188938,
+    "n_type_peak_T_K": 620.0,
+    "p_type_peak_ZT": 3.9023590142805973,
+    "p_type_peak_T_K": 660.0,
+    "near_EF_half_metallic_peak_ZT_n": 1.435781427162266,
+    "near_EF_half_metallic_peak_ZT_p": 1.837439077810843,
+    "engineering_300_1000K_n": {
+      "ZT_eng": 2.1481156262979195,
+      "eta_max_pct": 25.62835968945319
+    },
+    "engineering_300_1000K_p": {
+      "ZT_eng": 4.1186511506256505,
+      "eta_max_pct": 34.24640150800597
+    }
+  }
+}

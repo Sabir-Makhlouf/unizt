@@ -192,3 +192,16 @@ def parse_boltztrap2_trace(
         result["n_unit"] = resolved_unit
 
     return result
+
+
+def parse_spin_polarized_traces(
+    up_path: Union[str, Path],
+    dn_path: Union[str, Path],
+    vol_uc_m3: Optional[float] = None,
+    n_unit: Optional[str] = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Parse spin-up and spin-down BoltzTraP2/1 ``*.trace`` files."""
+    up_data = parse_boltztrap2_trace(up_path, vol_uc_m3=vol_uc_m3, n_unit=n_unit)
+    dn_data = parse_boltztrap2_trace(dn_path, vol_uc_m3=vol_uc_m3, n_unit=n_unit)
+    return up_data, dn_data
+

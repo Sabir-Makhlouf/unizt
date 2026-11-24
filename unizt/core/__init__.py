@@ -32,7 +32,7 @@ from unizt.core.validator import (
     validate_elastic_tensor,
     validate_transport_data,
 )
-from unizt.core.zt import ZTResult, compute_zt
+from unizt.core.zt import ZTResult, combine_spin_channels, compute_zt
 
 __all__ = [
     "BornStabilityError",
@@ -41,6 +41,7 @@ __all__ = [
     "ValidationError",
     "ZTResult",
     "cahill_pohl_kappa_min",
+    "combine_spin_channels",
     "compute_elastic_properties",
     "compute_engineering_zt",
     "compute_kappa_l",

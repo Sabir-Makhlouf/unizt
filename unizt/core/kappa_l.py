@@ -142,15 +142,17 @@ def cahill_pohl_kappa_min(
     modes = [(float(v_l), theta_l, 1.0), (float(v_t), theta_t, 2.0)]
 
     T_flat = np.atleast_1d(T_arr).astype(np.float64)
-    out = np.zeros_like(T_flat, dtype=np.float64)
+    T_unique, inv_idx = np.unique(T_flat, return_inverse=True)
+    out_unique = np.zeros_like(T_unique, dtype=np.float64)
 
-    for idx, temp in enumerate(T_flat.flat):
+    for idx, temp in enumerate(T_unique):
         total = 0.0
         for vel, theta_i, weight in modes:
             integral = _debye_heat_capacity_integral(theta_i / temp)
             total += weight * vel * ((temp / theta_i) ** 2) * integral
-        out.flat[idx] = prefactor * total
+        out_unique[idx] = prefactor * total
 
+    out = out_unique[inv_idx]
     return float(out.item()) if is_scalar else out.reshape(T_arr.shape)
 
 

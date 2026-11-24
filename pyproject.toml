@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "unizt"
-version = "0.1.0"
+version = "0.2.0"
 description = "Unified Post-Processing Tool for True Thermoelectric Figure of Merit ZT, Lattice Thermal Conductivity, and Device Efficiency from First-Principles DFT & BoltzTraP2 Calculations"
 readme = "README.md"
 license = { text = "MIT" }

@@ -18,6 +18,10 @@ htmlcov/
 venv/
 env/
 
+# Root duplicate trace copies (canonical copies live under examples/cs2vbr6/)
+/up.trace
+/dn.trace
+
 # IDE & OS metadata
 .vscode/
 .idea/

@@ -4,7 +4,7 @@ Lattice Thermal Conductivity, and Device Efficiency from First-Principles DFT & 
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Dr. Sabir Makhlouf"
 __email__ = "sabir.makhlouf@gmail.com"
 __license__ = "MIT"
@@ -33,6 +33,7 @@ from unizt.core import (
     EngineeringResult,
     ZTResult,
     cahill_pohl_kappa_min,
+    combine_spin_channels,
     compute_elastic_properties,
     compute_engineering_zt,
     compute_kappa_l,
@@ -53,6 +54,7 @@ from unizt.parsers import (
     parse_boltztrap2_trace,
     parse_elastic_tensor,
     parse_generic_transport,
+    parse_spin_polarized_traces,
     register_parser,
 )
 
@@ -68,6 +70,7 @@ __all__ = [
     "__license__",
     "__version__",
     "cahill_pohl_kappa_min",
+    "combine_spin_channels",
     "compute_elastic_properties",
     "compute_engineering_zt",
     "compute_kappa_l",
@@ -79,6 +82,7 @@ __all__ = [
     "parse_boltztrap2_trace",
     "parse_elastic_tensor",
     "parse_generic_transport",
+    "parse_spin_polarized_traces",
     "register_parser",
     "slack_kappa_l",
     "tau_constant",

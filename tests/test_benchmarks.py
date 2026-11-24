@@ -33,7 +33,7 @@ from unizt.core.validator import (
     validate_elastic_tensor,
     validate_transport_data,
 )
-from unizt.core.zt import compute_zt
+from unizt.core.zt import combine_spin_channels, compute_zt
 from unizt.parsers.boltztrap2 import parse_boltztrap2_trace
 from unizt.parsers.elastic_parser import parse_elastic_tensor
 from unizt.parsers.generic import parse_generic_transport
@@ -353,3 +353,110 @@ def test_cli_cite_and_end_to_end(tmp_path: Path):
     assert (outdir / "zt_vs_t.png").is_file()
     assert (outdir / "zt_heatmap.png").is_file()
     assert (outdir / "efficiency_vs_th.png").is_file()
+
+
+def test_combine_spin_channels_physics():
+    """Verify two-current model identities, spin-mixing term, and zero-sigma safety."""
+    T = np.array([300.0, 600.0, 600.0])
+    mu = np.array([0.20, 0.20, 0.30])
+    n = np.array([-1e25, -1e25, 0.0])
+    S_up = np.array([-200e-6, -250e-6, 0.0])
+    sig_up = np.array([1.0e5, 8.0e4, 0.0])
+    ke_up = np.array([0.8, 1.1, 0.0])
+
+    # 1. Identical up/dn channels: S_tot == S_up, sigma_tot == 2*sigma_up, zero spin mixing
+    up_ch = {"T": T, "mu": mu, "n": n, "S": S_up, "sigma": sig_up, "kappa_e": ke_up}
+    dn_same = {"T": T, "mu": mu, "n": n, "S": S_up, "sigma": sig_up, "kappa_e": ke_up}
+    comb_same = combine_spin_channels(up_ch, dn_same, kappa_l=1.0)
+
+    np.testing.assert_allclose(comb_same["S_tot"], S_up)
+    np.testing.assert_allclose(comb_same["sigma_tot"], 2.0 * sig_up)
+    np.testing.assert_allclose(comb_same["kappa_e_mix"], 0.0, atol=1e-15)
+    np.testing.assert_allclose(comb_same["kappa_e_tot"], 2.0 * ke_up)
+    np.testing.assert_allclose(comb_same["pf_tot"], (S_up ** 2) * (2.0 * sig_up))
+    assert np.all(np.isfinite(comb_same["S_tot"]))
+    assert comb_same["S_tot"][2] == 0.0
+
+    # 2. Distinct S_up != S_dn produces strictly positive spin-mixing term
+    S_dn = np.array([150e-6, 120e-6, 0.0])
+    sig_dn = np.array([0.5e5, 4.0e4, 0.0])
+    ke_dn = np.array([0.4, 0.5, 0.0])
+    dn_diff = {"T": T, "mu": mu, "n": n, "S": S_dn, "sigma": sig_dn, "kappa_e": ke_dn}
+
+    kappa_l = 1.5
+    comb_diff = combine_spin_channels(up_ch, dn_diff, kappa_l=kappa_l)
+    assert np.all(comb_diff["kappa_e_mix"][:2] > 0.0)
+    assert np.all(comb_diff["kappa_e_tot"][:2] > (ke_up[:2] + ke_dn[:2]))
+
+    expected_mix_0 = (sig_up[0] * sig_dn[0] / (sig_up[0] + sig_dn[0])) * ((S_up[0] - S_dn[0]) ** 2) * T[0]
+    expected_S_0 = (sig_up[0] * S_up[0] + sig_dn[0] * S_dn[0]) / (sig_up[0] + sig_dn[0])
+    expected_sig_0 = sig_up[0] + sig_dn[0]
+    expected_ke_0 = ke_up[0] + ke_dn[0] + expected_mix_0
+    expected_zt_0 = (expected_S_0 ** 2) * expected_sig_0 * T[0] / (expected_ke_0 + kappa_l)
+
+    assert comb_diff["kappa_e_mix"][0] == pytest.approx(expected_mix_0)
+    assert comb_diff["S_tot"][0] == pytest.approx(expected_S_0)
+    assert comb_diff["zt_tot"][0] == pytest.approx(expected_zt_0)
+
+
+def test_cli_spin_polarized_traces(tmp_path: Path):
+    """Verify CLI supports --trace-up and --trace-dn (including offset Ef grids)."""
+    up_file = tmp_path / "up.trace"
+    dn_file = tmp_path / "dn.trace"
+
+    up_rows = ["# Ef[Ry] T[K] N[e/uc] DOS S[V/K] sigma/tau0 RH kappa0"]
+    dn_rows = ["# Ef[Ry] T[K] N[e/uc] DOS S[V/K] sigma/tau0 RH kappa0"]
+    for T in (300.0, 600.0):
+        for ef, n_v, s_u, s_d in [
+            (0.18, 0.20, 2.2e-4, 1.5e-4),
+            (0.20, 0.05, 1.8e-4, 0.0),
+            (0.22, -0.08, -2.0e-4, 0.0),
+            (0.24, -0.22, -2.4e-4, -1.6e-4),
+        ]:
+            up_rows.append(f"{ef:.4f} {T:.1f} {n_v:.3f} 1.0 {s_u:.3e} 1.1e19 0.0 1.4e14")
+            # Slightly offset Ef grid in dn channel
+            dn_rows.append(f"{ef + 0.0005:.4f} {T:.1f} {0.5*n_v:.3f} 0.8 {s_d:.3e} 0.7e19 0.0 0.9e14")
+
+    up_file.write_text("\n".join(up_rows) + "\n", encoding="utf-8")
+    dn_file.write_text("\n".join(dn_rows) + "\n", encoding="utf-8")
+
+    C_iso = isotropic_tensor_from_moduli(30.0, 12.0)
+    elastic_file = tmp_path / "elastic.json"
+    elastic_file.write_text(json.dumps({"C_ij": C_iso.tolist()}), encoding="utf-8")
+
+    outdir = tmp_path / "spin_out"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "unizt.cli",
+            "--trace-up",
+            str(up_file),
+            "--trace-dn",
+            str(dn_file),
+            "--elastic",
+            str(elastic_file),
+            "--density",
+            "4500.0",
+            "--m-avg",
+            "88.0",
+            "--n-atoms",
+            "9",
+            "--tau-mode",
+            "constant",
+            "--tau-const",
+            "1e-14",
+            "--kappa-mode",
+            "slack",
+            "--outdir",
+            str(outdir),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "two-channel spin-polarized" in proc.stdout
+    assert f"UniZT v{__version__}" in proc.stdout
+    assert (outdir / "zt_results.csv").is_file()
+    assert (outdir / "zt_results.tex").is_file()
+

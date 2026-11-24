@@ -24,7 +24,7 @@ from unizt.core.kappa_l import (
     load_custom_kappa_csv,
 )
 from unizt.core.relaxation import compute_relaxation_time
-from unizt.core.zt import ZTResult, compute_zt
+from unizt.core.zt import ZTResult, combine_spin_channels, compute_zt
 from unizt.parsers.elastic_parser import parse_elastic_tensor
 from unizt.parsers.registry import get_parser, list_parsers
 from unizt.plotting import (
@@ -71,6 +71,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Transport & elastic inputs
     parser.add_argument("--trace", type=str, default=None, help="Path to transport trace/table file.")
+    parser.add_argument(
+        "--trace-up",
+        type=str,
+        default=None,
+        help="Path to spin-up BoltzTraP2/1 trace file (must pair with --trace-dn).",
+    )
+    parser.add_argument(
+        "--trace-dn",
+        type=str,
+        default=None,
+        help="Path to spin-down BoltzTraP2/1 trace file (must pair with --trace-up).",
+    )
     parser.add_argument(
         "--code",
         type=str,
@@ -275,6 +287,7 @@ def _print_summary(
         )
     print(
         f"Models              : tau_mode = {cfg['tau_mode']} | kappa_mode = {cfg['kappa_mode']}"
+        + (" | two-channel spin-polarized" if cfg.get("trace_up") else "")
     )
     print(
         f"Overall Peak ZT     : {zt_res.overall_peak_zt:.3f} ({zt_res.overall_peak_type}) "
@@ -309,8 +322,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 0
 
     cfg = _merge_config(args)
-    if not cfg.get("trace"):
-        parser.error("--trace is required unless --cite is passed.")
+    has_single = bool(cfg.get("trace"))
+    has_up = bool(cfg.get("trace_up"))
+    has_dn = bool(cfg.get("trace_dn"))
+    if has_up != has_dn:
+        parser.error("Both --trace-up and --trace-dn must be provided together.")
+    if has_single and has_up:
+        parser.error("Specify either --trace or the pair (--trace-up, --trace-dn), not both.")
+    if not has_single and not has_up:
+        parser.error("--trace (or --trace-up and --trace-dn) is required unless --cite is passed.")
 
     vol_scale = (const.angstrom ** 3) if cfg["vol_unit"] == "ang3" else 1.0
     vol_atom = float(cfg["vol_atom"]) * vol_scale if cfg.get("vol_atom") is not None else None
@@ -350,7 +370,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if cfg.get("n_unit") is not None:
             parse_kwargs["n_unit"] = cfg["n_unit"]
 
-    transport_data = parse_fn(cfg["trace"], **parse_kwargs)
+    if has_up:
+        up_data = parse_fn(cfg["trace_up"], **parse_kwargs)
+        dn_data = parse_fn(cfg["trace_dn"], **parse_kwargs)
+        transport_data = combine_spin_channels(up_data, dn_data, vol_uc_m3=vol_uc)
+    else:
+        transport_data = parse_fn(cfg["trace"], **parse_kwargs)
 
     c3d = cfg.get("c3d")
     if c3d is None and elastic_props is not None:

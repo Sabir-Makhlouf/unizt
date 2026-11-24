@@ -187,6 +187,12 @@ def _plot_single_regime_contour(
     vmin: float,
     vmax: float,
 ):
+    # Downsample dense DFT grids (> 15k points per regime) so triangulation stays fast
+    if log_n.size > 15000:
+        stride = max(1, log_n.size // 12000)
+        log_n = log_n[::stride]
+        T = T[::stride]
+        zt = zt[::stride]
     triang = mtri.Triangulation(log_n, T)
     levels = np.linspace(vmin, max(vmax, vmin + 1e-6), 24)
     cf = ax.tricontourf(triang, zt, levels=levels, cmap="inferno", extend="both")
