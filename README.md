@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/python-%3E%3D3.9-blue.svg)](https://pypi.org/project/unizt/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/Sabir-Makhlouf/unizt/blob/main/LICENSE)
 [![CI](https://github.com/Sabir-Makhlouf/unizt/actions/workflows/ci.yml/badge.svg)](https://github.com/Sabir-Makhlouf/unizt/actions)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24497476.svg)](https://doi.org/10.5281/zenodo.24497476)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24513282.svg)](https://doi.org/10.5281/zenodo.24513282)
 
 **UniZT (`v0.2.0`)** is a lightweight, code-agnostic, open-source Python package for unified first-principles thermoelectric post-processing. It bridges density functional theory (DFT) elastic tensors and semiclassical Boltzmann transport traces (`BoltzTraP2`/`1`) into realistic material and device-level thermoelectric evaluation—covering mechanical stability, acoustic lattice thermal conductivity, temperature-dependent carrier scattering, exact spin-polarized two-channel transport, physical rigid band approximation (RBA) bounds, and maximum thermoelectric generator leg efficiency.
 
@@ -193,7 +193,7 @@ If you use **UniZT** in your research, please cite the software archive (or run 
   year         = 2026,
   publisher    = {Zenodo},
   version      = {v0.2.0},
-  doi          = {10.5281/zenodo.24497476},
+  doi          = {10.5281/zenodo.24513282},
   url          = {https://github.com/Sabir-Makhlouf/unizt}
 }
 ```
